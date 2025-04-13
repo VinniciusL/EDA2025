@@ -1,0 +1,192 @@
+---
+title: "Dados Videos"
+author: "Vinnicius Pereira"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r importando bibliotecas, echo=TRUE, warning=FALSE}
+library(readxl)
+library(ggplot2)
+library(summarytools)
+library(GGally)
+library(ggpubr)
+library(mice)
+library(shiny)
+library(colourpicker)
+library(flexdashboard)
+library(tidyverse)
+library(knitr)
+library(rmarkdown)
+library(kableExtra)
+library(stargazer)
+library(shiny)
+library(mice)
+# Install thematic and un-comment for themed static plots (i.e., ggplot2)
+# thematic::thematic_rmd()
+```
+
+## Introdução
+
+A base de dados utilizada neste projeto se chama `dados_videos.xlsx` e contém informações sobre vídeos curtos e suas métricas de engajamento. A escolha se deu por apresentar variáveis numéricas suficientes para a análise e por conter dados faltantes, o que é ideal para validar técnicas de imputação. Os resultados esperados incluem uma descrição estatística da base, visualização de padrões de correlação entre variáveis e avaliação da normalidade dos dados, além de aplicar técnicas de imputação e desenvolver um dashboard interativo com Shiny.
+
+## 2. Escolha da Base de Dados
+
+## Importando os dados - Dados Vídeos
+
+```{r importando os dados, echo=TRUE, warning=FALSE}
+dados_videos <- read_excel("dados_videos.xlsx")
+View(dados_videos)
+```
+
+## Verificando as informações iniciais e uma síntese dos dados inicialmente
+
+```{r leitura_dados, warning=FALSE}
+head(dados_videos)
+summary(dados_videos)
+```
+
+## 3. Utilizando a função DESCR() - Estatísticas Descritivas
+
+```{r estatisticas_descritivas, message=FALSE, paged.print=FALSE, warning=FALSE}
+dados_videos %>%
+  dplyr::select(qtd_curtidas, qtd_visualizacoes, qtd_compartilhamento, qtd_downloads, qtd_comentarios) %>%
+  summarytools::descr(round.digits = 2, scientific = FALSE, style = "simple", transpose = TRUE) %>%
+  kableExtra::kbl(caption = "Estatísticas Descritivas das variáveis objetivo") %>%
+  kableExtra::kable_material(c("striped", "hover"))
+```
+
+## 4. Matriz de Dispersão
+
+```{r matriz_dispersao, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE}
+GGally::ggpairs(
+  dados_videos[, c("duracao_video", "qtd_visualizacoes", "qtd_curtidas", 
+           "qtd_compartilhamento", "qtd_downloads", "qtd_comentarios")],
+  title = "Matriz de Dispersão das Variáveis Numéricas",
+  upper = list(continuous = wrap("cor", size = 3)),
+  lower = list(continuous = wrap("smooth", alpha = 0.3, size = 0.1)),
+  diag = list(continuous = wrap("densityDiag"))
+)
+```
+
+## 5. Análise de Normalidade das Variáveis
+
+### 5A. O que é uma Distribuição Normal?
+
+A distribuição normal, também conhecida como distribuição Gaussiana, é uma distribuição de probabilidade contínua caracterizada por uma curva simétrica em forma de sino. Ela é definida por sua média (μ) e desvio padrão (σ), sendo que: - A média, mediana e moda são iguais; - Aproximadamente 68% dos dados estão a um desvio padrão da média, 95% a dois desvios e 99,7% a três; - É amplamente utilizada em estatística devido ao Teorema Central do Limite, que afirma que, sob certas condições, a média de várias amostras independentes de uma população terá distribuição normal.
+
+## 5B. Histogramas por Variável
+
+O número de *bins* foi escolhido com base na regra de Sturges: → k = 1 + 3,322 log(n) Onde k é o número de classes e n é o número total de observações. num_bins = 14.
+
+```{r histogramas_variaveis, warning=FALSE}
+variaveis <- c("duracao_video", "qtd_visualizacoes", "qtd_curtidas", 
+               "qtd_compartilhamento", "qtd_downloads", "qtd_comentarios")
+
+num_bins <- ceiling(log2(nrow(dados_videos)) + 1)
+
+for (var in variaveis) {
+  print(
+    ggplot(dados_videos, aes_string(x = var)) +
+      geom_histogram(bins = num_bins, fill = "skyblue", color = "black") +
+      labs(title = paste("Histograma de", var), x = var, y = "Frequência")
+  )
+}
+```
+
+## 5C. Q-Q Plot por Variável
+
+```{r qqplot_variaveis, warning=FALSE}
+for (var in variaveis) {
+  print(
+    ggqqplot(dados_videos[[var]], title = paste("Q-Q Plot de", var))
+  )
+}
+```
+
+## 5D e 5E. Teste de Normalidade (Shapiro-Wilk)
+
+**Desta forma, nenhuma das variáveis numéricas da base de dados segue uma distribuição normal.**
+
+Segundo o teste de Shapiro-Wilk, rejeita-se a hipótese nula de normalidade sempre que o p-valor é inferior a 0.05. Neste caso, todos os p-valores são muito inferiores a esse limite, indicando que os dados não são normalmente distribuídos.
+
+```{r teste_normalidade_shapiro, warning=FALSE}
+shapiro_resultados <- sapply(dados_videos[variaveis], function(x) shapiro.test(x)$p.value)
+shapiro_resultados
+```
+
+## 6. Completude dos Dados
+
+### Completude: Em pesquisa ao dicionário Oxford, seria referido a algo como qualidade, estado ou propriedade do que é completo, perfeito, acabado.
+
+Mas para a visão dos dados, seria algo referente a ter todas as informações necessárias presentes no conjunto, no caso, ter os dados inteiros, sem colunas ou linhas vazias, campos nulos e afins. E isso é totalmente um dos pilares quando falamos em qualidade dos dados, porque sempre buscamos a confiabilidade, consistência e que sejam dados totalmente confiáveis. E o impacto na análise exploratória de dados (EDA) é praticamente o que significa a completude, a busca para que possamos fazer com que os dados sejam de máxima credibilidade, assertivos, consistentes e essa ação de tratar os dados, é para buscarmos a qualidade de completude ao negócio, pesquisa ou afins.
+
+Podemos abordar diversas práticas de governança, metodologias e afins, mas organizações avançadas sempre estão monitorando a completude de seus dados, justamente por ser facilmente mensurável e diretamente ligado à confiança nas análises.
+
+Por isso, a completude de dados não é apenas uma questão técnica — é também uma questão de credibilidade. Sem dados completos, a análise deixa de ser levada em consideração no negócio e passa a ser um empecilho, já que os dados são extremamente importantes para apoiar decisões estratégicas, e caso não tenhamos visão clara disso tudo, é como andar de carro, subindo uma serra cheia de neblina, um perigo enorme.
+
+## 7. Completude dos Dados
+```{r completude_variaveis, warning=FALSE}
+completude <- sapply(dados_videos, function(x) sum(!is.na(x)) / length(x))
+completude
+```
+
+## 8. Imputação de Dados com MICE
+
+```{r imputacao_mice, warning=FALSE}
+imp <- mice(dados_videos, m = 5, method = "pmm", seed = 123)
+dados_imputados <- complete(imp, 1)
+head(dados_imputados)
+colSums(is.na(dados_imputados))
+```
+### Verificando quantidade de ajustes foi realizado pelo Pacote MICE - modelo 2.
+```{r imputacao_qtd_mice, warning=FALSE}
+colSums(is.na(dados_imputados))
+```
+
+## Dashboard com Shiny
+
+```{r dashboard_shiny, eval=FALSE}
+# Interface do usuário
+ui <- fluidPage(
+  titlePanel("Dashboard de Vídeos"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("variavel", "Escolha a variável:", 
+                  choices = c("qtd_visualizacoes", "qtd_curtidas", 
+                              "qtd_compartilhamento", "qtd_downloads", "qtd_comentarios")),
+      colourInput("cor", "Cor da linha:", value = "blue"),
+      sliderInput("xlim", "Limite do eixo X:", min = 0, max = 100, value = c(0, 100)),
+      sliderInput("ylim", "Limite do eixo Y:", min = 0, max = 1000000, value = c(0, 500000))
+    ),
+    mainPanel(
+      plotOutput("grafico")  # Corrigido: nome em minúsculo
+    )
+  )
+)
+
+# Servidor
+server <- function(input, output) {
+  output$grafico <- renderPlot({
+    ggplot(dados_videos, aes_string(x = "duracao_video", y = input$variavel)) +
+      geom_line(color = input$cor) +
+      coord_cartesian(xlim = input$xlim, ylim = input$ylim) +
+      labs(title = paste("Gráfico de Linha para", input$variavel),
+           x = "Duração do Vídeo", y = input$variavel)
+  })
+}
+
+# Rodar o app
+shinyApp(ui = ui, server = server)
+```
+
+## Referências
+
+-   Fonte dos dados: base simulada `dados_videos.xlsx`
+-   Pacotes utilizados: `ggplot2`, `summarytools`, `GGally`, `ggpubr`, `mice`, `shiny`, `colourpicker`
+- Código disponibilizado em: 
+-   Curso: Análise Exploratória de Dados com R
