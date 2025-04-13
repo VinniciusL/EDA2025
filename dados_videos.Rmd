@@ -2,7 +2,9 @@
 title: "Dados Videos"
 author: "Vinnicius Pereira"
 date: "`r Sys.Date()`"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -148,7 +150,7 @@ colSums(is.na(dados_imputados))
 colSums(is.na(dados_imputados))
 ```
 
-## Dashboard com Shiny
+## 9. Dashboard com Shiny
 
 ```{r dashboard_shiny, eval=FALSE}
 # Interface do usuário
@@ -188,5 +190,5 @@ shinyApp(ui = ui, server = server)
 
 -   Fonte dos dados: base simulada `dados_videos.xlsx`
 -   Pacotes utilizados: `ggplot2`, `summarytools`, `GGally`, `ggpubr`, `mice`, `shiny`, `colourpicker`
-- Código disponibilizado em: 
+-   #10 Código disponibilizado em: https://github.com/VinniciusL/EDA2025
 -   Curso: Análise Exploratória de Dados com R
