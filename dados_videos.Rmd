@@ -3,7 +3,6 @@ title: "Dados Videos"
 author: "Vinnicius Pereira"
 date: "`r Sys.Date()`"
 output:
-  pdf_document: default
   html_document: default
 ---
 
@@ -28,8 +27,6 @@ library(kableExtra)
 library(stargazer)
 library(shiny)
 library(mice)
-# Install thematic and un-comment for themed static plots (i.e., ggplot2)
-# thematic::thematic_rmd()
 ```
 
 ## Introdução
@@ -132,6 +129,7 @@ Podemos abordar diversas práticas de governança, metodologias e afins, mas org
 Por isso, a completude de dados não é apenas uma questão técnica — é também uma questão de credibilidade. Sem dados completos, a análise deixa de ser levada em consideração no negócio e passa a ser um empecilho, já que os dados são extremamente importantes para apoiar decisões estratégicas, e caso não tenhamos visão clara disso tudo, é como andar de carro, subindo uma serra cheia de neblina, um perigo enorme.
 
 ## 7. Completude dos Dados
+
 ```{r completude_variaveis, warning=FALSE}
 completude <- sapply(dados_videos, function(x) sum(!is.na(x)) / length(x))
 completude
@@ -145,7 +143,9 @@ dados_imputados <- complete(imp, 1)
 head(dados_imputados)
 colSums(is.na(dados_imputados))
 ```
+
 ### Verificando quantidade de ajustes foi realizado pelo Pacote MICE - modelo 2.
+
 ```{r imputacao_qtd_mice, warning=FALSE}
 colSums(is.na(dados_imputados))
 ```
@@ -186,9 +186,13 @@ server <- function(input, output) {
 shinyApp(ui = ui, server = server)
 ```
 
+Foto do Dashboard com Shiny\
+\
+![](images/Captura de tela 2025-04-12 213221.png)
+
 ## Referências
 
 -   Fonte dos dados: base simulada `dados_videos.xlsx`
 -   Pacotes utilizados: `ggplot2`, `summarytools`, `GGally`, `ggpubr`, `mice`, `shiny`, `colourpicker`
--   #10 Código disponibilizado em: https://github.com/VinniciusL/EDA2025
+-   #10 Código disponibilizado em: <https://github.com/VinniciusL/EDA2025>
 -   Curso: Análise Exploratória de Dados com R
